@@ -6,6 +6,10 @@
 
 <p align="center"><img src="images/titan_crab_idle.gif" alt=""></p>
 
+## Textures
+
+![](images/textures.png)
+
 ## Examples
 
 ![](images/boar.png)
