@@ -10,6 +10,10 @@
 
 ![](images/textures.png)
 
+## Pixel perfect
+
+![](images/pixel_perfect.png)
+
 ## Examples
 
 ![](images/boar.png)
