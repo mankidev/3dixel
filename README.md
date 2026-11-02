@@ -12,4 +12,4 @@
 
 ![](images/rabbit.png)
 
-![](images/tarantula.png)
+![](images/tarantula_idle.gif)
