@@ -15,6 +15,7 @@ Thanks for helping with 3dixel.
 - New textures and rules should come from a real, finished model, not from a quick test.
 - Run `kit.mixels(build_parts())` on every model you change; it must return an empty list.
 - Code has no comments; explain the change in the pull request instead.
+- By sending a pull request you agree that your work is released under the MIT License.
 
 ## Code of conduct
 
