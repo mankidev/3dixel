@@ -39,6 +39,7 @@ def box_faces(f, t):
     }
 
 
+OPPOSITE = {"front": "back", "back": "front", "right": "left", "left": "right", "top": "bottom", "bottom": "top"}
 LIGHT = np.array([-0.35, 1.0, 0.55])
 LIGHT = LIGHT / np.linalg.norm(LIGHT)
 
@@ -59,7 +60,7 @@ def render(parts, yaw, pitch, scale, size, center, ss=3, target=(0, 0, 0)):
         q = cam @ (p - tgt)
         return np.array([cx + q[0] * sc, cy - q[1] * sc]), q[2]
 
-    for part in parts:
+    for order, part in enumerate(parts):
         faces = box_faces(part["from"], part["to"])
         for name, (o, u, v) in faces.items():
             tex = part["tex"].get(name)
@@ -74,7 +75,7 @@ def render(parts, yaw, pitch, scale, size, center, ss=3, target=(0, 0, 0)):
                 continue
             n = -n / nl
             if np.dot(n, view) <= 0:
-                if not part.get("double"):
+                if not part.get("double") or part["tex"].get(OPPOSITE[name]) is not None:
                     continue
                 n = -n
             s0, d0 = proj(o_w)
@@ -101,7 +102,7 @@ def render(parts, yaw, pitch, scale, size, center, ss=3, target=(0, 0, 0)):
             inside = (a >= 0) & (a < 1) & (b >= 0) & (b < 1)
             if not inside.any():
                 continue
-            d = d0 + a * du + b * dv
+            d = d0 + a * du + b * dv + order * 1e-4
             sub_d = depth[ya:yb + 1, xa:xb + 1]
             win = inside & (d > sub_d)
             if not win.any():

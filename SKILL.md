@@ -1,6 +1,6 @@
 ---
 name: 3dixel
-description: Builds Blockbench-style 3D models (low cube count, pixel textures painted in code) from a description, renders previews, and checks every step with the user. Use whenever the user asks for a Blockbench model, a Minecraft-style mob, or any blocky 3D creature or prop.
+description: Builds Blockbench-style 3D models (low cube count, pixel textures painted in code) from a description, renders previews, and checks every step with the user. Use whenever the user asks for a Blockbench model, a Minecraft-style mob, or any blocky 3D creature, prop or weapon.
 ---
 
 # 3dixel
@@ -19,7 +19,7 @@ Read shows only the first frame of a GIF. Check motion on the numbered frame she
 
 ## Use the core
 
-`core/` holds everything a model needs. Start every model from `examples/rabbit/model.py`, not from an empty file.
+`core/` holds everything a model needs. Start every model from an example, not from an empty file: `examples/rabbit/model.py` for animals, `examples/crimson-sword/model.py` for weapons and props. The sword example also holds helpers you can copy: `rod(p0, p1, th, ...)` (a box between two points with tube shading), `chain_rods` (a curved horn or tentacle from a list of points), `line_sprite` (a pixel-perfect line card), `crystal` (chevron facets with lit edges), `glow` (top tones drawn unlit), a shine pose, and `anim_turn.py` (tilted 360 turntable).
 
 - `kit.py`
   - `part(f, t, tex, tr)`: one box from corner `f` to corner `t`. `tex` maps each face (`front back right left top bottom`) to an image. `tr` is a list of `(pivot, (rx, ry, rz))` rotations, innermost first.
@@ -37,6 +37,8 @@ Read shows only the first frame of a GIF. Check motion on the numbered frame she
   - Framing is automatic. The model always fills the frame, so the image does not show real size.
   - The ground shadow is an ellipse sized from the farthest point of the model (`--shadow`, default 0.85). Long legs or claws spread out make it too big: the shadow belongs under the body, so lower it (0.5 for a crab or spider with long legs). `anim.loop` takes the same `shadow=`.
 - `anim.py`: `track(t, keys)` with smoothstep keyframes, and `loop(build_parts, pose_at, out, name, shadow=0.85)` for an idle GIF and a frame sheet. For animation, `build_parts(pose)` must take a pose dict whose default gives the rest pose; build the left and right side separately so they can move out of step.
+
+Where two parts overlap in the same plane (equal-thickness segments of a chain lying in one plane, a card on a card), the renderer lets the later part in the list win, so previews do not flicker. Blockbench and the game do not: there the shared plane flickers (z-fighting) at every joint. Before export, give one of the two parts a different thickness or move it 0.01 out. A double-sided part that has both a front and a back texture draws only the side facing the camera.
 
 Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `"double": True` are drawn from both sides (planes).
 
@@ -76,7 +78,8 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 ## 3. Texture
 
 - Small palette with hue shift: shadows move toward blue or purple, light toward warm. A white animal gets cool blue shadows.
-- No random speckle noise. Patterns are placed on purpose.
+- No random speckle noise. Patterns are placed on purpose. Keep facet and engraving contrast at one tone up or down, and put bright sparkle pixels on some facet edges, not all of them; strong steps everywhere read as noise.
+- One pixel is one unit, and it must read that way on every face. `shaded_idx` alone splits a long side into two or three flat bands; on a 22-unit blade each band is 7 units tall and reads as one giant pixel next to the 1-unit pixels of cards and small parts. `shaded_idx` is only a base, never the finished texture, not even in a blockout. Every face gets detail drawn at the 1-unit scale (facets, edges, cracks, wear, stepped light) so no flat area of one color is much bigger than the detail around it.
 - No frame on the edge of a face. The texture runs across faces; the renderer gives the light difference.
 - Top and front faces are lighter than bottom and back. Side faces go darker from top to bottom.
 - One strong accent on a pale body draws the eye: an eye, a crack, a crystal.
@@ -88,7 +91,7 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Chitin (crab and insect leg tips, claw fingers): gradient from shell tone at the root to dark at the tip, two dark rings near the root, fine streaks running along the length (never across, which reads as plaid), a light shine line on the lit edge that fades toward the tip, a darker underside.
 - Everything you add besides the base texture gets the same care: cards (teeth, spikes, tips, crests) and small cubes get a lit side and a shadow side, a gradient from root to tip and a highlight edge. A one-color card looks like a paper cutout.
 - Teeth are cards along the edge of the mouth, at the model's pixel size: a plane just inside the lip on each side of the upper and lower jaw, teeth 1 pixel wide with a 1-pixel gap, fangs 2 or 3 pixels tall, the rest 1. Open the jaw enough that both rows show. Not texture only, not tiny cubes.
-- Sharp parts (teeth, claw tips, spikes, leg points) are cards, drawn as stepped full-pixel shapes. A point seen only edge-on disappears; use two crossed planes so it shows from every side.
+- Every sharp edge or point is a card, always: sword and axe edges, blade tips, teeth, claw tips, spikes, leg points. A box never makes a cutting edge. Sharp parts are cards, drawn as stepped full-pixel shapes. A point seen only edge-on disappears; use two crossed planes so it shows from every side.
 - A card takes the palette of the part it sits on: teeth on a purple-black finger use the light tones of the same purple-black palette, spikes on a gray palm use the shell grays. When a card does not match, change the card, not the part.
 - No face stays flat-shaded. Every part gets a texture that fits the animal: plates and sutures under a crab, wall plates and a crater on a barnacle, rings on an eye stalk, crust on the legs. A plain banded face looks bare next to a textured one.
 - Never a flat texture, with no exception: every face of every part, including legs, hooves, hands, inner and back faces, bottoms and small parts. A gradient alone counts as flat. Legs get muscle, a bone ridge on the shin, a tendon at the back, a knee cap; hooves get growth rings, a split and a shine line. Before showing, render a close-up of each limb and name the detail on every face; a face with nothing to name is not done.
@@ -123,9 +126,11 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 
 - Look at the preview and all three views yourself. The side view shows most of the posture mistakes.
 - Compare against the rules above: cube count, layers, head position, proportions, noise, face frames.
+- Look at the largest faces for big pixels: a block of one color several units wide with nothing in it reads as a bigger pixel than the rest of the model. Break it up before showing.
 - Run `kit.mixels(build_parts())`. It must return an empty list; each entry is a part with a non-whole size or a texture that does not match its face.
 - Look at the face up close (`render.closeup`, from the side as well as the front): eyes, brows, nostrils and tusks are too small to judge in the full preview.
 - Aim close-ups at the real position of the part: build only that part, take `render.points(parts)` and use the middle of its bounds. A guessed target misses rotated parts such as claws.
+- Check for flicker before any GIF: render the same close-up at two yaws half a degree apart and look at the difference. Changes along the edges are normal motion. Patches inside faces are two faces fighting in one plane; fix the parts, not only the render.
 - Fix what you find, then show the user and say what you changed.
 - When the user asks for a change, keep the old `model.py` as `model_vN.py` so you can go back.
 
@@ -135,5 +140,20 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Keep the mob in place, like on a treadmill: after building, shift every part so a middle ring stays at its rest position. The game moves the mob forward.
 - If rings rise as the wave passes, keep the lift at 1 unit or less. More looks like the body is boiling.
 - Pulsing glow only when the user asks for it. Then it is soft, never fully off, with the phase shifted along the body so the light travels.
+- A shine is a diagonal band that slides once from the base of the blade to the tip, then the prop rests for the rest of the loop. The band center goes to the lightest tone and its halo two tones up, both unlit. Adding a fixed amount (+3) to every tone is invisible on small frames. Check the frame sheet: the band must be clear in at least three frames.
+- A turntable loops without a jump when the yaw is `start + 360 * i / N` for `i` from 0 to N - 1. Tilt the prop around its lowest point so nothing sinks into the ground, and use the same pose keys over the same N so the shine loops too.
 - Do not call the time parameter `t` in a function that also builds boxes with `f, t = ...`; the box corner overwrites the time.
 - Rendering an animation takes over a minute on a phone. Run it in the background, never two renders at once, and stop a render that a newer request has made obsolete.
+
+## 8. Weapons and crystal props
+
+- Read the reference at its real pixel size first. Find the pixel size from the run lengths of color changes along one row (5 screen pixels per art pixel is common), shrink the image to 1:1 and keep that PNG next to the reference. Take the width of each part row by row and the palette (quantize to about 40 colors) from it. For a big prop, half the art size keeps details at one unit or more.
+- A sword or knife blade is one double-sided card, no spine box. The ridge in the middle comes from the texture: the half that faces the light is light, the other half is dark, with a 1-pixel bright ridge line between them. The edge pixels get a highlight on the lit side. Only the blade material goes on the blade card: a metal spike of the guard painted onto it reads as the blade itself turning blue. If the guard reaches over the blade, make it a separate part.
+- Thin parts (crossbars, curls, threads, tendrils, thin horn tips) are cards with a pixel-perfect line sprite, not chains of 1-unit boxes.
+- Weapons keep real proportions. The grip is about a fifth of the blade length and clearly thinner than the blade (3 units on a 7 to 9 unit blade). The pommel is at most one or two units wider than the grip. A grip as thick as the blade and a big pommel make the sword look like a toy.
+- Curved metal parts (horns, tentacles, vines on a grip) are chains of rods between points on the curve, 4 to 6 segments, thinner toward the tip, with a card for the point. Tube shading is one light line along the lit edge and a ring now and then. A ring every few units plus a highlight on each ring reads as a checkerboard.
+- A grip gets a spiral wrap that continues across its four faces (offset each face by the widths before it), and a metal ferrule at each end.
+- Crystals shine: their two lightest tones are drawn unlit (`alpha > 1.5`), facets are chevrons with a lighter edge on the lit side, and only some facet edges get a sparkle pixel. With lit tones only, crystals look like dull plastic.
+- A plain prop lacks flair. Cards add it where they belong: thorns on the outer curve of a horn, a crossed-card point on every horn tip, a small crystal cluster on the pommel. Keep the cutting edge clean: shards along the blade edge hide its shape and get removed.
+- Small 2D details often do not read in 3D: a dangling thread looked like a stray line, small colored gems looked busy. Leave them out or ask. When a part is removed, fill the bare spot (an engraving, rings) so no flat area is left.
+- A single-card blade disappears edge-on in the side view. That is expected; say so when you show it.
