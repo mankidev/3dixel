@@ -5,6 +5,8 @@ description: Builds Blockbench-style 3D models (low cube count, pixel textures p
 
 # 3dixel
 
+You are a modeler whose work competes with the best Blockbench models on Sketchfab. Before you show any image, put it side by side with the reference and list the differences.
+
 You build the model in code: boxes, pivots and textures painted pixel by pixel. You do not have Blockbench, so you see the model only through the core renderer. Show every step to the user and fix what they say before you add more.
 
 ## Showing an image
@@ -33,7 +35,8 @@ Read shows only the first frame of a GIF. Check motion on the numbered frame she
   - `python render.py <model_folder> [--gif] [--closeup x,y,z,r] [--name n] [--out dir]` writes `<name>_preview.png`, `<name>_views.png` (front, side, back), and optionally a turntable GIF and a close-up.
   - The model folder needs `model.py` with `build_parts()`.
   - Framing is automatic. The model always fills the frame, so the image does not show real size.
-- `anim.py`: `track(t, keys)` with smoothstep keyframes, and `loop(build_parts, pose_at, out, name)` for an idle GIF and a frame sheet.
+  - The ground shadow is an ellipse sized from the farthest point of the model (`--shadow`, default 0.85). Long legs or claws spread out make it too big: the shadow belongs under the body, so lower it (0.5 for a crab or spider with long legs). `anim.loop` takes the same `shadow=`.
+- `anim.py`: `track(t, keys)` with smoothstep keyframes, and `loop(build_parts, pose_at, out, name, shadow=0.85)` for an idle GIF and a frame sheet. For animation, `build_parts(pose)` must take a pose dict whose default gives the rest pose; build the left and right side separately so they can move out of step.
 
 Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `"double": True` are drawn from both sides (planes).
 
@@ -42,14 +45,17 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Ask what the animal or object is and what style the user wants, if it is not clear.
 - Think about the real animal from the side first: how long the body is compared to its height, where the highest point of the back is, where the head sits.
 - Pick the size from the real scale: 16 units = 1 block. A rabbit body is about 8 units long.
+- "Giant" or "huge" means at least 5 to 6 blocks (80 to 96 units) in its largest size. Measure the bounds with `render.points(build_parts())` before showing, since the render always fills the frame.
 - Count the cubes before you write code.
+- When the user names a creature you cannot picture exactly (a monster from a game, a "void worm"), ask for a reference or concept image before the first blockout. A guessed design gets thrown away.
+- A giant crawler lies flat on the ground by default. Do not rear its head up like a snake unless the user asks.
 
 ## 2. Shape
 
 - Few cubes. A simple mob is 12 to 30 cubes: one cube per body part, two or three segments per leg at most.
-- Eyes, teeth, patterns and edges go in the texture, not in extra cubes. If a cube does not change the silhouette, leave it out.
+- Eyes, patterns and edges go in the texture, not in extra cubes. If a cube does not change the silhouette, leave it out.
 - Box sizes are whole numbers and at least 1. One texture pixel is one unit. Positions and pivots may be halves.
-- No mixels: the whole model uses one pixel size. No cube smaller than one unit (teeth, claws, spikes as tiny cubes), no half-unit length, no face texture denser than the face. Small details such as teeth go in the texture of the jaw.
+- No mixels: the whole model uses one pixel size. No cube smaller than one unit (teeth, claws, spikes as tiny cubes), no half-unit length, no face texture denser than the face.
 - No layers: do not stack a slightly smaller box on top of a big one to fake roundness. One box per body part. Roundness comes from the texture, from rotating the box, and from separate real parts (head, jaw, thigh).
 - Slopes and curves come from rotated boxes, not from stairs of boxes.
 - Four-legged animals: the body is long, low and level. The head sits in front of the body, not on top of it. A tall body with the head on top reads as a bird.
@@ -61,6 +67,11 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Two dark pixels side by side merge into one block: two nostrils next to each other look like one hole. Make the part an odd width so one pixel sits between them.
 - When one part grows, check the whole body again. Giant legs on an unchanged body make the body read as missing; scale the body and the claws with them.
 - Crab claws are held in front of the mouth and folded inward, fingers pointing toward the middle. Claws sticking straight forward read as a forklift.
+- Long segmented bodies (worms, centipedes, serpents) are a chain of rings, each placed at the end of the last with its own yaw and pitch. The rings must read as separate blocks: do not sink one deep into the next. Leave a small gap and fill it with a thinner joint box, the soft tissue between plates. Use about one ring per 1 to 1.5 body thickness; fewer, longer rings read as train cars or crates.
+- Keep the cube count low by leaving out parts that do not change the silhouette, never by merging rings or jaw segments that do. A worm with 8 long rings and one-box jaws looked worse than one with 18 rings and two-part jaws.
+- A tail tapers slowly. The tip of a giant worm stays at least a third as thick as its thickest ring, or the tail reads as a string.
+- Spikes along a big body stay short: back spikes about half to two thirds of the body thickness, side spikes about a third. The base is wide (5 to 9 pixels) and narrows evenly to one pixel; a spike that is one pixel wide for half its length reads as a stick or an antenna.
+- Nothing goes below the ground. Open jaws and lowered parts included, the lowest point of `render.points(build_parts())` must be at 0 or above.
 
 ## 3. Texture
 
@@ -70,17 +81,23 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Top and front faces are lighter than bottom and back. Side faces go darker from top to bottom.
 - One strong accent on a pale body draws the eye: an eye, a crack, a crystal.
 - Colors are not fixed. The texture functions return palette indices; the palettes in the examples are only examples. Build the palette from what the user asks for (hue-shifted, dark to light) and pass it in.
-- Thin line sprites on planes (hooks, curls, antennae, vines) are pixel perfect: no L-shaped double corners. Use straight runs with one diagonal step at each corner; a line made only of diagonal steps looks like floating dots in 3D. A sprite must never be cut by the edge of its plane, or its inner end floats.
+- Thin line sprites on planes (hooks, curls, antennae, vines) are pixel perfect: no L-shaped double corners. Round curls drawn with diagonal steps look good. A sprite must never be cut by the edge of its plane: the cut side disappears and the inner end of a curl floats in the air. Place each sprite fully inside its plane.
 - Patterned textures (scales, plates, armor) are drawn with a light map, not as a flat repeat. The face goes from a lit corner to a shadow corner with hue shift. Details are strong in the light and fade in the shadow, where seams almost disappear. Each unit (a scale) is uneven in size and shaded like a dome. The same pattern repeated at the same contrast looks like wallpaper.
 - A wild or dark animal keeps a low base tone and no bright blotches. Light fur makes it look tame.
 - Hard parts (tusk, horn, claw, beak) are never one flat color: a gradient along the length (stained root, light tip), a dark growth ring near the root, a dark ridge line, a darker underside.
 - Chitin (crab and insect leg tips, claw fingers): gradient from shell tone at the root to dark at the tip, two dark rings near the root, fine streaks running along the length (never across, which reads as plaid), a light shine line on the lit edge that fades toward the tip, a darker underside.
 - Everything you add besides the base texture gets the same care: cards (teeth, spikes, tips, crests) and small cubes get a lit side and a shadow side, a gradient from root to tip and a highlight edge. A one-color card looks like a paper cutout.
+- Teeth are cards along the edge of the mouth, at the model's pixel size: a plane just inside the lip on each side of the upper and lower jaw, teeth 1 pixel wide with a 1-pixel gap, fangs 2 or 3 pixels tall, the rest 1. Open the jaw enough that both rows show. Not texture only, not tiny cubes.
 - Sharp parts (teeth, claw tips, spikes, leg points) are cards, drawn as stepped full-pixel shapes. A point seen only edge-on disappears; use two crossed planes so it shows from every side.
 - A card takes the palette of the part it sits on: teeth on a purple-black finger use the light tones of the same purple-black palette, spikes on a gray palm use the shell grays. When a card does not match, change the card, not the part.
 - No face stays flat-shaded. Every part gets a texture that fits the animal: plates and sutures under a crab, wall plates and a crater on a barnacle, rings on an eye stalk, crust on the legs. A plain banded face looks bare next to a textured one.
+- Never a flat texture, with no exception: every face of every part, including legs, hooves, hands, inner and back faces, bottoms and small parts. A gradient alone counts as flat. Legs get muscle, a bone ridge on the shin, a tendon at the back, a knee cap; hooves get growth rings, a split and a shine line. Before showing, render a close-up of each limb and name the detail on every face; a face with nothing to name is not done.
 - Plants and corals on a body are crossed planes with a branching full-pixel sprite; a one-pixel twig reads as an antenna. Give the trunk two pixels and the tips a lighter tone.
 - A glowing eye glows only in the pupil (the front and outer face). A cube that glows on every face reads as a gem.
+- Glow is an accent. Glowing whole edges, whole spikes or every seam looks like neon. Keep the shell dark and put the glow in the joints between plates and in the last pixels of spike tips.
+- A "void" or shadow creature stays near black: even its lightest shell tone is a dark blue-gray, not a mid tone.
+- The inside of a mouth uses the creature's own palette: flesh in a slightly lighter, more saturated version of the body hue, teeth in the light tones of the same palette. Red flesh and white bone in a dark blue body looked pasted on.
+- Round patterns (a throat, a sucker, a ring of teeth) use the real distance from the center (`hypot`), not the larger of x and y. Square rings and dotted rings look like a circuit board. A few large teeth read better than many single pixels, which turn into speckle.
 - Bare skin is not flat either. Fur runs over the snout bridge up to the bare tip; the tip gets a lighter rim and wrinkle lines behind it. Tilt the snout a little down so the profile narrows toward the tip.
 
 ## 4. Face and expression
@@ -88,6 +105,7 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - An angry face is a brow slanting down toward the nose over a dark eye.
 - A brow painted in the texture disappears on dark fur. Use geometry: a hair card (`tip_fur`, dark root, lighter tips, leaning out from the face) on a bristly animal, a slanted 1-unit cube on a smooth one.
 - Keep the eye black unless the user asks for a color.
+- Some creatures have no eyes (worms, many deep or void monsters). Do not add eyes the reference does not show.
 
 ## 5. Fur
 
@@ -110,3 +128,12 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Aim close-ups at the real position of the part: build only that part, take `render.points(parts)` and use the middle of its bounds. A guessed target misses rotated parts such as claws.
 - Fix what you find, then show the user and say what you changed.
 - When the user asks for a change, keep the old `model.py` as `model_vN.py` so you can go back.
+
+## 7. Animation
+
+- A crawl is a wave of yaw offsets that runs along the rings: ring k turns by `A * sin(2*pi*(t + k*c))`, so the wave runs from head to tail. 10 to 15 degrees and about two waves along the body read well; under 10 degrees the motion barely shows.
+- Keep the mob in place, like on a treadmill: after building, shift every part so a middle ring stays at its rest position. The game moves the mob forward.
+- If rings rise as the wave passes, keep the lift at 1 unit or less. More looks like the body is boiling.
+- Pulsing glow only when the user asks for it. Then it is soft, never fully off, with the phase shifted along the body so the light travels.
+- Do not call the time parameter `t` in a function that also builds boxes with `f, t = ...`; the box corner overwrites the time.
+- Rendering an animation takes over a minute on a phone. Run it in the background, never two renders at once, and stop a render that a newer request has made obsolete.

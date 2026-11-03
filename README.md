@@ -16,6 +16,8 @@
 
 ## Examples
 
+![](images/void_worm_crawl.gif)
+
 ![](images/boar.png)
 
 ![](images/rabbit.png)

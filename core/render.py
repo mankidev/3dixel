@@ -171,9 +171,21 @@ def shot(parts, yaw, size, view, shadow=True, bg=BG):
     if shadow:
         cam = rot_matrix(pitch, 0, 0) @ rot_matrix(0, yaw, 0)
         q = cam @ (np.array([tgt[0], view["ground"], tgt[2]]) - tgt)
-        r = view["radius"] * 0.85 * scale
+        r = view["radius"] * view.get("shadow", 0.85) * scale
         sh = (size[0] / 2 + q[0] * scale, size[1] / 2 - q[1] * scale, r, r * math.sin(math.radians(pitch)))
     return compose(color, alpha, ss, bg=bg, shadow=sh)
+
+
+def save_gif(frames, path, delay=80):
+    step = max(1, len(frames) // 8)
+    sample = frames[::step]
+    w, h = frames[0].size
+    sheet = Image.new("RGB", (w, h * len(sample)))
+    for i, f in enumerate(sample):
+        sheet.paste(f, (0, i * h))
+    pal = sheet.quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
+    q = [f.convert("RGB").quantize(palette=pal, dither=Image.Dither.NONE) for f in frames]
+    q[0].save(path, save_all=True, append_images=q[1:], duration=delay, loop=0, optimize=False)
 
 
 def strip(images):
@@ -189,14 +201,15 @@ def closeup(parts, target, radius, size=(420, 360), pitch=28, yaws=(0, -30)):
     return strip([shot(parts, y, size, view, shadow=False) for y in yaws])
 
 
-def preview(parts, out, name, gif=False, pitch=28):
+def preview(parts, out, name, gif=False, pitch=28, shadow=0.85):
     big, small = (720, 560), (420, 330)
-    shot(parts, -35, big, fit(parts, big, pitch)).save(os.path.join(out, f"{name}_preview.png"))
-    view = fit(parts, small, pitch)
+    view = dict(fit(parts, big, pitch), shadow=shadow)
+    shot(parts, -35, big, view).save(os.path.join(out, f"{name}_preview.png"))
+    view = dict(fit(parts, small, pitch), shadow=shadow)
     strip([shot(parts, y, small, view) for y in (0, -90, 145)]).save(os.path.join(out, f"{name}_views.png"))
     if gif:
         frames = [shot(parts, -35 + i * 15, small, view) for i in range(24)]
-        frames[0].save(os.path.join(out, f"{name}_turntable.gif"), save_all=True, append_images=frames[1:], duration=80, loop=0)
+        save_gif(frames, os.path.join(out, f"{name}_turntable.gif"))
 
 
 def load_model(path):
@@ -221,13 +234,14 @@ if __name__ == "__main__":
     ap.add_argument("--gif", action="store_true")
     ap.add_argument("--pitch", type=float, default=28)
     ap.add_argument("--closeup", help="x,y,z,radius")
+    ap.add_argument("--shadow", type=float, default=0.85)
     a = ap.parse_args()
     mod = load_model(a.model)
     folder = a.model if os.path.isdir(a.model) else os.path.dirname(os.path.abspath(a.model))
     out = a.out or folder
     name = a.name or os.path.basename(os.path.abspath(folder))
     parts = mod.build_parts()
-    preview(parts, out, name, a.gif, a.pitch)
+    preview(parts, out, name, a.gif, a.pitch, a.shadow)
     if a.closeup:
         x, y, z, r = (float(v) for v in a.closeup.split(","))
         closeup(parts, (x, y, z), r, pitch=a.pitch).save(os.path.join(out, f"{name}_closeup.png"))

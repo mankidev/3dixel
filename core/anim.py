@@ -1,6 +1,6 @@
 import os
 from PIL import Image, ImageDraw, ImageFont
-from render import BG, fit, shot
+from render import BG, fit, save_gif, shot
 
 
 def ease(u):
@@ -23,10 +23,10 @@ def label_font(size=20):
     return ImageFont.load_default()
 
 
-def loop(build_parts, pose_at, out, name, n=48, delay=80, yaw=-35, size=(640, 480), pitch=24, every=4):
-    view = fit(build_parts(), size, pitch)
+def loop(build_parts, pose_at, out, name, n=48, delay=80, yaw=-35, size=(640, 480), pitch=24, every=4, shadow=0.85):
+    view = dict(fit(build_parts(), size, pitch), shadow=shadow)
     frames = [shot(build_parts(pose_at(i / n)), yaw, size, view) for i in range(n)]
-    frames[0].save(os.path.join(out, f"{name}_idle.gif"), save_all=True, append_images=frames[1:], duration=delay, loop=0)
+    save_gif(frames, os.path.join(out, f"{name}_idle.gif"), delay)
     font = label_font()
     pick = sorted(set(range(0, n, every)) | {n - 1})
     tw, th = size[0] // 2, size[1] // 2
