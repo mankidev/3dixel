@@ -9,8 +9,8 @@ def hexc(h):
     return np.array([int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)])
 
 
-def face_size(f, t, face):
-    d = np.subtract(t, f)
+def face_size(f, t, face, density=1):
+    d = np.subtract(t, f) * density
     w, h = {
         "front": (d[0], d[1]), "back": (d[0], d[1]),
         "right": (d[2], d[1]), "left": (d[2], d[1]),
@@ -467,20 +467,20 @@ def belly_scutes(h, w, seed, n=8, direction="down", light=None):
     return light_tone(light, detail, n), np.ones((h, w), bool)
 
 
-def mixels(parts):
+def mixels(parts, density=1):
     issues = []
     for i, p in enumerate(parts):
-        d = np.subtract(p["to"], p["from"])
+        d = np.subtract(p["to"], p["from"]) * density
         for v in d:
             if p.get("double") and abs(v) < 1e-9:
                 continue
             if abs(v - round(v)) > 1e-6 or round(v) < 1:
-                issues.append((i, "size", tuple(float(x) for x in d)))
+                issues.append((i, "size", tuple(float(x) for x in np.subtract(p["to"], p["from"]))))
                 break
         for face, img in p["tex"].items():
             if img is None:
                 continue
-            want = face_size(p["from"], p["to"], face)
+            want = face_size(p["from"], p["to"], face, density)
             if tuple(img.shape[:2]) != tuple(want):
                 issues.append((i, face, tuple(img.shape[:2]), tuple(want)))
     return issues

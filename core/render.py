@@ -161,8 +161,10 @@ def fit(parts, size, pitch=28, yaws=range(0, 360, 15), margin=0.84):
         cam = rot_matrix(pitch, 0, 0) @ rot_matrix(0, yaw, 0)
         q = (pts - tgt) @ cam.T
         reach = max(reach, np.abs(q[:, 0]).max() / size[0], np.abs(q[:, 1]).max() / size[1])
-    radius = np.hypot(pts[:, 0] - tgt[0], pts[:, 2] - tgt[2]).max()
-    return {"scale": margin / (2 * reach), "target": tuple(tgt), "ground": float(lo[1]), "radius": float(radius), "pitch": pitch}
+    low = pts[pts[:, 1] <= lo[1] + 0.2 * (hi[1] - lo[1])]
+    foot = np.median(low[:, [0, 2]], axis=0)
+    radius = np.quantile(np.hypot(low[:, 0] - foot[0], low[:, 1] * 0 + low[:, 2] - foot[1]), 0.9)
+    return {"scale": margin / (2 * reach), "target": tuple(tgt), "ground": float(lo[1]), "radius": float(radius), "pitch": pitch, "foot": (float(foot[0]), float(foot[1]))}
 
 
 def shot(parts, yaw, size, view, shadow=True, bg=BG):
@@ -171,7 +173,8 @@ def shot(parts, yaw, size, view, shadow=True, bg=BG):
     sh = None
     if shadow:
         cam = rot_matrix(pitch, 0, 0) @ rot_matrix(0, yaw, 0)
-        q = cam @ (np.array([tgt[0], view["ground"], tgt[2]]) - tgt)
+        fx, fz = view.get("foot", (tgt[0], tgt[2]))
+        q = cam @ (np.array([fx, view["ground"], fz]) - tgt)
         r = view["radius"] * view.get("shadow", 0.85) * scale
         sh = (size[0] / 2 + q[0] * scale, size[1] / 2 - q[1] * scale, r, r * math.sin(math.radians(pitch)))
     return compose(color, alpha, ss, bg=bg, shadow=sh)

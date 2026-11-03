@@ -11,7 +11,7 @@ You build the model in code: boxes, pivots and textures painted pixel by pixel. 
 
 ## Showing an image
 
-1. Render with the core (`render.py`) into the project folder.
+1. Keep code and images apart: every `.py` file (model, old versions, check scripts) goes in `src/` inside the project folder, and the project folder itself holds only images. Render with the core into the project folder: `python render.py src --out . --name vN`.
 2. Open the PNG yourself with the Read tool and look at it before the user does.
 3. Give the user the full path of each file.
 
@@ -19,12 +19,12 @@ Read shows only the first frame of a GIF. Check motion on the numbered frame she
 
 ## Use the core
 
-`core/` holds everything a model needs. Start every model from an example, not from an empty file: `examples/rabbit/model.py` for animals, `examples/crimson-sword/model.py` for weapons and props. The sword example also holds helpers you can copy: `rod(p0, p1, th, ...)` (a box between two points with tube shading), `chain_rods` (a curved horn or tentacle from a list of points), `line_sprite` (a pixel-perfect line card), `crystal` (chevron facets with lit edges), `glow` (top tones drawn unlit), a shine pose, and `anim_turn.py` (tilted 360 turntable).
+`core/` holds everything a model needs. Start every model from an example, not from an empty file: `examples/rabbit/model.py` for animals, `examples/crimson-sword/model.py` for weapons and props, `examples/ember-knight/` for armored humanoids, poses, a walk cycle and a block scene. The sword example also holds helpers you can copy: `rod(p0, p1, th, ...)` (a box between two points with tube shading), `chain_rods` (a curved horn or tentacle from a list of points), `line_sprite` (a pixel-perfect line card), `crystal` (chevron facets with lit edges), `glow` (top tones drawn unlit), a shine pose, and `anim_turn.py` (tilted 360 turntable).
 
 - `kit.py`
   - `part(f, t, tex, tr)`: one box from corner `f` to corner `t`. `tex` maps each face (`front back right left top bottom`) to an image. `tr` is a list of `(pivot, (rx, ry, rz))` rotations, innermost first.
   - `mirror(p)`: the same part on the other side (x flipped, textures flipped).
-  - `face_size`, `shaded_idx`, `side_bands`, `to_rgb`, `hexc`: palette index textures with top light and sides darker toward the bottom.
+  - `face_size`, `shaded_idx`, `side_bands`, `to_rgb`, `hexc`: palette index textures with top light and sides darker toward the bottom. `face_size(f, t, face, density)` and `mixels(parts, density)` take a texture density in pixels per unit (default 1).
   - `mixels(parts)`: lists parts whose size is not whole or whose texture size does not match the face.
   - `chain`, `solve_leg`: a leg as a chain of segments; one joint angle is solved so the foot touches the ground. `chain` takes an optional `hairfn(k, f, t, tr)` that returns extra parts (one part or a list) for each segment, for hair cards or tip spikes.
   - Fur: `weave_fur`, `lock_fur`, `tip_fur` return `(idx, alpha)`. `direction` (`right up left down`) is where the hair tips point. `paint(idx, alpha, pal)` gives RGB, or RGBA when part of it is cut out.
@@ -35,7 +35,7 @@ Read shows only the first frame of a GIF. Check motion on the numbered frame she
   - `python render.py <model_folder> [--gif] [--closeup x,y,z,r] [--name n] [--out dir]` writes `<name>_preview.png`, `<name>_views.png` (front, side, back), and optionally a turntable GIF and a close-up.
   - The model folder needs `model.py` with `build_parts()`.
   - Framing is automatic. The model always fills the frame, so the image does not show real size.
-  - The ground shadow is an ellipse sized from the farthest point of the model (`--shadow`, default 0.85). Long legs or claws spread out make it too big: the shadow belongs under the body, so lower it (0.5 for a crab or spider with long legs). `anim.loop` takes the same `shadow=`.
+  - The ground shadow is centered on the median of the parts near the ground (feet, hems), so a long weapon does not pull it away. It is an ellipse sized from those parts (`--shadow`, default 0.85). Long legs or claws spread out make it too big: the shadow belongs under the body, so lower it (0.5 for a crab or spider with long legs). `anim.loop` takes the same `shadow=`.
 - `anim.py`: `track(t, keys)` with smoothstep keyframes, and `loop(build_parts, pose_at, out, name, shadow=0.85)` for an idle GIF and a frame sheet. For animation, `build_parts(pose)` must take a pose dict whose default gives the rest pose; build the left and right side separately so they can move out of step.
 
 Where two parts overlap in the same plane (equal-thickness segments of a chain lying in one plane, a card on a card), the renderer lets the later part in the list win, so previews do not flicker. Blockbench and the game do not: there the shared plane flickers (z-fighting) at every joint. Before export, give one of the two parts a different thickness or move it 0.01 out. A double-sided part that has both a front and a back texture draws only the side facing the camera.
@@ -124,13 +124,14 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 
 ## 6. Check before you show
 
+- If the visual-taste skill is installed, run it on the preview and the close-ups (`--ref` with the reference) and fix every `FIX` line before you show. Before any GIF, render two views half a degree apart and run its `--pair` check.
 - Look at the preview and all three views yourself. The side view shows most of the posture mistakes.
 - Compare against the rules above: cube count, layers, head position, proportions, noise, face frames.
 - Look at the largest faces for big pixels: a block of one color several units wide with nothing in it reads as a bigger pixel than the rest of the model. Break it up before showing.
 - Run `kit.mixels(build_parts())`. It must return an empty list; each entry is a part with a non-whole size or a texture that does not match its face.
 - Look at the face up close (`render.closeup`, from the side as well as the front): eyes, brows, nostrils and tusks are too small to judge in the full preview.
 - Aim close-ups at the real position of the part: build only that part, take `render.points(parts)` and use the middle of its bounds. A guessed target misses rotated parts such as claws.
-- Check for flicker before any GIF: render the same close-up at two yaws half a degree apart and look at the difference. Changes along the edges are normal motion. Patches inside faces are two faces fighting in one plane; fix the parts, not only the render.
+- Check for flicker before any GIF: render the same close-up at two yaws half a degree apart and compare them (with `taste.py --pair` when visual-taste is installed, or by looking at the difference image). Changes along the edges are normal motion. Patches inside faces are two faces fighting in one plane; fix the parts, not only the render.
 - Fix what you find, then show the user and say what you changed.
 - When the user asks for a change, keep the old `model.py` as `model_vN.py` so you can go back.
 
@@ -157,3 +158,37 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - A plain prop lacks flair. Cards add it where they belong: thorns on the outer curve of a horn, a crossed-card point on every horn tip, a small crystal cluster on the pommel. Keep the cutting edge clean: shards along the blade edge hide its shape and get removed.
 - Small 2D details often do not read in 3D: a dangling thread looked like a stray line, small colored gems looked busy. Leave them out or ask. When a part is removed, fill the bare spot (an engraving, rings) so no flat area is left.
 - A single-card blade disappears edge-on in the side view. That is expected; say so when you show it.
+
+## 9. Armored humanoids
+
+- One texture density for the whole model and its scene. A character as detailed as a reference sprite needs about the sprite's pixel count: at 1 pixel per unit a 48-unit knight had a ninth of the pixels of the reference and every texture turned into big blocks. Use `density=2` (pass it to `face_size` and `mixels`); sizes may then be halves, positions quarters.
+- Measure the reference part by part: shoulder height against the chin, head width against shoulder width, coat length against the boots. A wide boxy torso and shoulders pushed above the chin were both wrong.
+- No box man. The torso narrows from chest to waist; the breastplate is two plates turned toward the middle so the front comes to a ridge, with mail flush between them (not sunk behind); the belly gets overlapping lames. Limbs are tapering segments with moderate muscle (3.5 units on a 48-unit body, a bicep plate, a forearm that narrows to the wrist).
+- A head sits on a neck you can see (mail neck and a gorget between scarf and helmet), not sunk into the collar.
+- Helmets: a skull, a separate top cap, then the crown on the cap. One continuous eye slit; a ridge that splits it reads as two eyes. A V visor is two halves turned so the ridge comes forward; with the wrong sign the face caves in.
+- Hands are a back plate, curled fingers and a thumb, never one box. A weapon grip passes through the middle of the fist and the fist turns across the grip.
+- Boots: shaft narrowing to the ankle, a low sole, a sloped instep and a narrower toe, all turned around one ankle point, with the shaft reaching into the instep. A tall box foot as wide as the leg reads as an elephant foot, and a gap between shaft and heel reads as a broken leg.
+- Pose with a joint chain: hips carry chest, chest carries head, arms and weapon. Weight on one leg, hips and shoulders tilted against each other, the torso and head turned. A symmetric upright stance looks like a statue. Place hands where the user says; do not default to a hand on the hip.
+- Nothing passes through anything: cloth in front of plates, mail narrower than the gap between plates, drapes in front of the breastplate, cloth in front of a raised knee.
+- Small glowing pixels on dark armor read as orange stones. Leave them out unless the user asks for glow.
+- When the user is unhappy with a part twice, render three or four candidates that differ in structure (not only texture) next to the reference in the same views, and let them pick.
+
+## 10. Scenes
+
+- A background is built from blocks with the same renderer and the same density as the model, never a 2D painting. Minecraft-style blocks have 16x16 faces; at density 2 a block is 8 units, so a 48-unit boss stands six blocks tall.
+- Build only what was asked. A floor alone means no walls, props or torches.
+- An endless floor is one large part whose top texture is painted texel by texel; thousands of block parts are slow. Fog is applied per texel by camera depth, and the far floor disappears into the fog, whose color matches the bottom of the sky.
+- Take the scene palette and mood from the character: warm dark tones for a bronze and crimson knight, a soft halo in the cloak color behind it, dust in a warm gray.
+- Light and shade agree with the renderer's light (from the upper left front): texture highlights on the left and front edges, shadows toward the back right. Cast the character's shadow by projecting every part's corners along the light onto the floor, filling the convex hull of each part, with a 1-pixel dither edge. Use one shadow only: an extra ellipse under the feet shows as a second shadow.
+- Realistic texture means a better texture, not more things. Regular Bayer dither everywhere reads as cloth; use clumped grain of 1 to 3 pixels and broad bands with a narrow dither strip only where two tones meet.
+- Dust is 1 to 2 pixels, faint, and moves a whole number of times across the frame per loop. Bigger specks read as bubbles.
+- Heavy frame renders go to a server: send code with tar over ssh, run two processes, pull only the result. Make the script executable or call it with `bash` (files from Termux arrive without the execute bit), never `pkill -f` a name that appears in the same ssh command, and compare the pulled file's checksum with the last one so an old result is never shown as new.
+
+## 11. Walk cycles
+
+- Solve the legs with IK, not with guessed joint angles. The stance foot is nailed to the floor and slides back at exactly the treadmill speed; the swing foot follows a lifted path; the knee comes from a two-bone solve between hip and foot; the hip height is a smooth curve that dips at each footfall. Never lift the whole body to fix a foot below the ground: that one-frame jump reads as a stutter.
+- A heavy walk: stance about 60% of the cycle, a high knee in the swing (thigh about 40 degrees forward, knee bent about 70 degrees), heel first at contact, hips turning and leaning toward the stance leg, chest turning against them and jolting forward at each footfall, the free arm swinging about 22 degrees, cloth following with a little lag. Feet that only shuffle and a still torso look static.
+- Cloth over the legs: every frame, take the leg points in the cloth's own frame and open each panel to the smallest angle that clears the most forward point.
+- A treadmill loop: the floor moves the stride per cycle; make the floor texture periodic over the loop's total shift and loop several cycles so the repeat sits in the fog.
+- Before rendering, print per frame the hip height, the head height, the stance foot's position and anything solved (a sword tip on the ground). A stutter shows as one jump in these numbers.
+- Make the GIF with ffmpeg (`palettegen` and `paletteuse=dither=none`); a palette taken from a few sample frames bands dark gradients into blotches. Show a small preview first and render full size after the user agrees.
