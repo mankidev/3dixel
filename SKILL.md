@@ -19,7 +19,7 @@ Read shows only the first frame of a GIF. Check motion on the numbered frame she
 
 ## Use the core
 
-`core/` holds everything a model needs. Start every model from an example, not from an empty file: `examples/rabbit/model.py` for animals, `examples/crimson-sword/model.py` for weapons and props, `examples/ember-knight/` for armored humanoids, poses, a walk cycle and a block scene. The sword example also holds helpers you can copy: `rod(p0, p1, th, ...)` (a box between two points with tube shading), `chain_rods` (a curved horn or tentacle from a list of points), `line_sprite` (a pixel-perfect line card), `crystal` (chevron facets with lit edges), `glow` (top tones drawn unlit), a shine pose, and `anim_turn.py` (tilted 360 turntable).
+`core/` holds everything a model needs. Start every model from an example, not from an empty file: `examples/rabbit/model.py` for animals, `examples/crimson-sword/model.py` for weapons and props, `examples/ember-knight/` for armored humanoids, poses, a walk cycle and a block scene, `examples/pale-stalker/` for a hairy spider-like creature with lying hair cards, sunken eyes and an IK idle in a dark scene. The sword example also holds helpers you can copy: `rod(p0, p1, th, ...)` (a box between two points with tube shading), `chain_rods` (a curved horn or tentacle from a list of points), `line_sprite` (a pixel-perfect line card), `crystal` (chevron facets with lit edges), `glow` (top tones drawn unlit), a shine pose, and `anim_turn.py` (tilted 360 turntable).
 
 - `kit.py`
   - `part(f, t, tex, tr)`: one box from corner `f` to corner `t`. `tex` maps each face (`front back right left top bottom`) to an image. `tr` is a list of `(pivot, (rx, ry, rz))` rotations, innermost first.
@@ -50,6 +50,7 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - "Giant" or "huge" means at least 5 to 6 blocks (80 to 96 units) in its largest size. Measure the bounds with `render.points(build_parts())` before showing, since the render always fills the frame.
 - Count the cubes before you write code.
 - When the user names a creature you cannot picture exactly (a monster from a game, a "void worm"), ask for a reference or concept image before the first blockout. A guessed design gets thrown away.
+- When the reference is a character from a game or a film, do not rebuild it. Keep the archetype and change what identifies it (helmet, plume, weapon head), or ask for another reference.
 - A giant crawler lies flat on the ground by default. Do not rear its head up like a snake unless the user asks.
 
 ## 2. Shape
@@ -69,6 +70,10 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Two dark pixels side by side merge into one block: two nostrils next to each other look like one hole. Make the part an odd width so one pixel sits between them.
 - When one part grows, check the whole body again. Giant legs on an unchanged body make the body read as missing; scale the body and the claws with them.
 - Crab claws are held in front of the mouth and folded inward, fingers pointing toward the middle. Claws sticking straight forward read as a forklift.
+- Spider legs arch: the femur rises up and out to a knee above the body, the tibia drops to the ground outside the body. Legs that hang straight down from the body read as stilts.
+- A spider mouth is two chelicerae under the eyes: each a hairy root box and a narrower tip box, splayed into a V and darker than the body, with a curved fang card at each tip folding inward. A dark mouth shape painted on a jaw box read as a smile.
+- A joint part (a knee or elbow knob) rotates around its own center. Rotated around the start of the segment before it, it drifts off the joint and floats in the air.
+- A card that ends at a fixed point (a foot spike reaching the ground) keeps a fixed length. Sized from the pose, it stretches into a thin line when the leg lifts.
 - Long segmented bodies (worms, centipedes, serpents) are a chain of rings, each placed at the end of the last with its own yaw and pitch. The rings must read as separate blocks: do not sink one deep into the next. Leave a small gap and fill it with a thinner joint box, the soft tissue between plates. Use about one ring per 1 to 1.5 body thickness; fewer, longer rings read as train cars or crates.
 - Keep the cube count low by leaving out parts that do not change the silhouette, never by merging rings or jaw segments that do. A worm with 8 long rings and one-box jaws looked worse than one with 18 rings and two-part jaws.
 - A tail tapers slowly. The tip of a giant worm stays at least a third as thick as its thickest ring, or the tail reads as a string.
@@ -91,6 +96,7 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Chitin (crab and insect leg tips, claw fingers): gradient from shell tone at the root to dark at the tip, two dark rings near the root, fine streaks running along the length (never across, which reads as plaid), a light shine line on the lit edge that fades toward the tip, a darker underside.
 - Everything you add besides the base texture gets the same care: cards (teeth, spikes, tips, crests) and small cubes get a lit side and a shadow side, a gradient from root to tip and a highlight edge. A one-color card looks like a paper cutout.
 - Teeth are cards along the edge of the mouth, at the model's pixel size: a plane just inside the lip on each side of the upper and lower jaw, teeth 1 pixel wide with a 1-pixel gap, fangs 2 or 3 pixels tall, the rest 1. Open the jaw enough that both rows show. Not texture only, not tiny cubes.
+- A card must sit in front of the face it belongs to. Teeth placed behind the front plane of the jaw were hidden in every view.
 - Every sharp edge or point is a card, always: sword and axe edges, blade tips, teeth, claw tips, spikes, leg points. A box never makes a cutting edge. Sharp parts are cards, drawn as stepped full-pixel shapes. A point seen only edge-on disappears; use two crossed planes so it shows from every side.
 - A card takes the palette of the part it sits on: teeth on a purple-black finger use the light tones of the same purple-black palette, spikes on a gray palm use the shell grays. When a card does not match, change the card, not the part.
 - No face stays flat-shaded. Every part gets a texture that fits the animal: plates and sutures under a crab, wall plates and a crater on a barnacle, rings on an eye stalk, crust on the legs. A plain banded face looks bare next to a textured one.
@@ -108,6 +114,9 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - An angry face is a brow slanting down toward the nose over a dark eye.
 - A brow painted in the texture disappears on dark fur. Use geometry: a hair card (`tip_fur`, dark root, lighter tips, leaning out from the face) on a bristly animal, a slanted 1-unit cube on a smooth one.
 - Keep the eye black unless the user asks for a color.
+- Sunken eyes: cut holes in the face texture (alpha 0), put the eye cube one unit behind the face and build the socket walls as separate double-sided planes. A double-sided box does not draw its inner walls when the opposite face has a texture. Eyes that stick out of the face read as buttons.
+- A realistic eye is a glass dome: black center, a soft window highlight of 2 or 3 pixels with a gray halo in the upper corner on the light side, a dark red glow in the lower half and a dark rim. Highlight and glow are unlit, so they still read in the dark.
+- Hair over the eyes stays short (a brow fringe of 1 or 2 units). A long fringe hides the focal point.
 - Some creatures have no eyes (worms, many deep or void monsters). Do not add eyes the reference does not show.
 
 ## 5. Fur
@@ -119,6 +128,9 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Fur must be neither noisy nor grid-like. Every dash with its own random length and tone looks noisy. Fixed bricks and checkers look like woven cloth.
 - Hair cards and fringe planes only for animals whose hair breaks the silhouette (tarantula, hedgehog, shaggy wolf mane). A rabbit or a short-haired dog gets texture only.
 - Never put a short, thin, ragged hair card on top of the head. Seen from above or the front it reads as a dark slit, not as hair. A head crest must be a full-pixel card: every bristle a whole pixel column, opaque, with a stepped outline drawn on purpose (no random ragged edge), root in the body tone, tips lighter.
+- Lying hair on top of the head is fine: full-pixel opaque cards tilted about 15 degrees from the surface, pointing back and overlapping like shingles. From above they read as fur, not as slits.
+- Hairy legs (spiders): rows of lying hair cards on all four sides of every segment, tilted about 22 degrees toward the tip, the rows on the sides offset from the front and back. The side cards break the silhouette and get light tips. Cards that face the camera keep tones close to the surface (about one tone of spread), or they turn into a camouflage pattern. Under the cards the segment texture is one soft light field plus `flow`, without extra dither or noise.
+- Plate edges get hanging fringe cards: a smooth length profile, root in the body tone, tips lighter.
 - A crest along the back also starts in the body tone. A root in the darkest tone reads as a crack along the spine.
 - When you offer fur options, make them differ in method (strand layout, direction, locks or cards), not only in noise settings.
 
@@ -129,6 +141,7 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Compare against the rules above: cube count, layers, head position, proportions, noise, face frames.
 - Look at the largest faces for big pixels: a block of one color several units wide with nothing in it reads as a bigger pixel than the rest of the model. Break it up before showing.
 - Run `kit.mixels(build_parts())`. It must return an empty list; each entry is a part with a non-whole size or a texture that does not match its face.
+- Many hair cards near the ground pull the shadow median to one side. Override `foot` and `radius` in the view from `render.fit` so the shadow sits under the body.
 - Look at the face up close (`render.closeup`, from the side as well as the front): eyes, brows, nostrils and tusks are too small to judge in the full preview.
 - Aim close-ups at the real position of the part: build only that part, take `render.points(parts)` and use the middle of its bounds. A guessed target misses rotated parts such as claws.
 - Check for flicker before any GIF: render the same close-up at two yaws half a degree apart and compare them (with `taste.py --pair` when visual-taste is installed, or by looking at the difference image). Changes along the edges are normal motion. Patches inside faces are two faces fighting in one plane; fix the parts, not only the render.
@@ -140,6 +153,10 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - A crawl is a wave of yaw offsets that runs along the rings: ring k turns by `A * sin(2*pi*(t + k*c))`, so the wave runs from head to tail. 10 to 15 degrees and about two waves along the body read well; under 10 degrees the motion barely shows.
 - Keep the mob in place, like on a treadmill: after building, shift every part so a middle ring stays at its rest position. The game moves the mob forward.
 - If rings rise as the wave passes, keep the lift at 1 unit or less. More looks like the body is boiling.
+- An idle with planted feet: when the body bobs, solve each knee with a two-bone IK (fixed femur and tibia lengths, bending toward the rest knee). The lengths stay constant, so `mixels` stays empty in every frame and hair cards keep their count and do not flicker.
+- Check each gesture in the view the GIF uses. A lifted front leg seen from the front hid behind the rear leg on the same side; lift it out and forward so it leaves the other leg's silhouette.
+- A creepy idle: a slow breath, a sudden head tilt held for a while, quick twitches of the mouth parts, one leg tapping the ground twice. Fast moves sit between long still holds.
+- A dark scene: black background, lit texels darkened to about half, unlit texels (eyes) kept as they are, and a falloff toward the bottom so the legs fade into the dark. A shadow ellipse is invisible on black; leave it out.
 - Pulsing glow only when the user asks for it. Then it is soft, never fully off, with the phase shifted along the body so the light travels.
 - A shine is a diagonal band that slides once from the base of the blade to the tip, then the prop rests for the rest of the loop. The band center goes to the lightest tone and its halo two tones up, both unlit. Adding a fixed amount (+3) to every tone is invisible on small frames. Check the frame sheet: the band must be clear in at least three frames.
 - A turntable loops without a jump when the yaw is `start + 360 * i / N` for `i` from 0 to N - 1. Tilt the prop around its lowest point so nothing sinks into the ground, and use the same pose keys over the same N so the shine loops too.
