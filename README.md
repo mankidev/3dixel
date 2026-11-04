@@ -16,6 +16,8 @@
 
 ## Examples
 
+![](images/flesh_hound_walk.gif)
+
 ![](images/pale_stalker_idle.gif)
 
 ![](images/ember_knight_walk.gif)
