@@ -19,7 +19,7 @@ Read shows only the first frame of a GIF. Check motion on the numbered frame she
 
 ## Use the core
 
-`core/` holds everything a model needs. Start every model from an example, not from an empty file: `examples/rabbit/model.py` for animals, `examples/crimson-sword/model.py` for weapons and props, `examples/ember-knight/` for armored humanoids, poses, a walk cycle and a block scene, `examples/pale-stalker/` for a hairy spider-like creature with lying hair cards, sunken eyes and an IK idle in a dark scene, `examples/flesh-hound/` for a hairless four-legged creature with quill cards, a hunched creature stance, a posable head and tail and a four-leg IK walk. The sword example also holds helpers you can copy: `rod(p0, p1, th, ...)` (a box between two points with tube shading), `chain_rods` (a curved horn or tentacle from a list of points), `line_sprite` (a pixel-perfect line card), `crystal` (chevron facets with lit edges), `glow` (top tones drawn unlit), a shine pose, and `anim_turn.py` (tilted 360 turntable).
+`core/` holds everything a model needs. Start every model from an example, not from an empty file: `examples/rabbit/model.py` for animals, `examples/crimson-sword/model.py` for weapons and props, `examples/ember-knight/` for armored humanoids, poses, a walk cycle and a block scene, `examples/pale-stalker/` for a hairy spider-like creature with lying hair cards, sunken eyes and an IK idle in a dark scene, `examples/flesh-hound/` for a hairless four-legged creature with quill cards, a hunched creature stance, a posable head and tail and a four-leg IK walk, `examples/grin-wraith/` for a heavy seated beast with a sloped head roof, a grin cut into the face, plates turned toward the middle, a spiked fur collar, glowing hands and feet with separate fingers and a dark-scene idle with bloom on the eyes. The sword example also holds helpers you can copy: `rod(p0, p1, th, ...)` (a box between two points with tube shading), `chain_rods` (a curved horn or tentacle from a list of points), `line_sprite` (a pixel-perfect line card), `crystal` (chevron facets with lit edges), `glow` (top tones drawn unlit), a shine pose, and `anim_turn.py` (tilted 360 turntable).
 
 - `kit.py`
   - `part(f, t, tex, tr)`: one box from corner `f` to corner `t`. `tex` maps each face (`front back right left top bottom`) to an image. `tr` is a list of `(pivot, (rx, ry, rz))` rotations, innermost first.
@@ -52,6 +52,7 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - When the user names a creature you cannot picture exactly (a monster from a game, a "void worm"), ask for a reference or concept image before the first blockout. A guessed design gets thrown away.
 - When the reference is a character from a game or a film, do not rebuild it. Keep the archetype and change what identifies it (helmet, plume, weapon head), or ask for another reference.
 - A giant crawler lies flat on the ground by default. Do not rear its head up like a snake unless the user asks.
+- Read the reference part by part before the blockout: crop each region at twice its size and write down every limb and where it is. A leg folded across the front read as an arm, and a sitting rump read as a stump fading into smoke; the whole model was rebuilt.
 
 ## 2. Shape
 
@@ -84,6 +85,11 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Paws are about as wide as the leg above them. A wide flat paw block reads as an elephant foot or a slipper.
 - A tail on a heavy body starts inside the rear box with a root about two thirds of the rear box height and tapers from there. A thin tail stuck on the back face reads as a stick.
 - A box that does not read as a body part goes. A shoulder blade box sticking out of the chest read as a stray plank on the leg.
+- A boxy head gets a roof: four slabs hinged on the top edges and tilted about 35 degrees inward, with a small cap over the gap between them. The head reads rounded from every side without stacking a smaller box.
+- Chest and belly muscles are plates turned toward the middle on a narrower core (pecs about 16 degrees, belly plates about 10 and tucked under at the bottom). The waist stays narrower than the ribcage and the ribcage narrower than the shoulder collar.
+- A heavy seated beast: the rump is a core box inside a ring of eight plates tilted out at the bottom, so it widens to the ground like a skirt instead of a crate. One leg folds forward across the body with the foot in front, the other folds under it.
+- Lobes on the sides of a head stay small (about a third of the head width) and turn outward. Big flat lobes with a spiral read as loudspeakers, and a head that is wider than the shoulders crushes the body.
+- A spiky fur collar is a ring of cards with a spiked top edge around the top of the shoulder box, tilted out. Thin single quills there read as whiskers.
 
 ## 3. Texture
 
@@ -116,6 +122,9 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - The inside of a mouth uses the creature's own palette: flesh in a slightly lighter, more saturated version of the body hue, teeth in the light tones of the same palette. Red flesh and white bone in a dark blue body looked pasted on.
 - Round patterns (a throat, a sucker, a ring of teeth) use the real distance from the center (`hypot`), not the larger of x and y. Square rings and dotted rings look like a circuit board. A few large teeth read better than many single pixels, which turn into speckle.
 - Bare skin is not flat either. Fur runs over the snout bridge up to the bare tip; the tip gets a lighter rim and wrinkle lines behind it. Tilt the snout a little down so the profile narrows toward the tip.
+- A dark beast stays near black: its lightest body tone about #48504e. Compare the mean lightness with the reference (visual-taste) before showing; mid grays read as a stone statue.
+- Fur on a dark beast is `lock_fur`. Domed scales read as gravel, and small stamped curls turn into noise at preview size.
+- A top face under an overhang (a belly plate under the pecs) gets darker by hand. Lit by the renderer, it reads as a pale ledge.
 
 ## 4. Face and expression
 
@@ -126,6 +135,9 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - A realistic eye is a glass dome: black center, a soft window highlight of 2 or 3 pixels with a gray halo in the upper corner on the light side, a dark red glow in the lower half and a dark rim. Highlight and glow are unlit, so they still read in the dark.
 - Hair over the eyes stays short (a brow fringe of 1 or 2 units). A long fringe hides the focal point.
 - Some creatures have no eyes (worms, many deep or void monsters). Do not add eyes the reference does not show.
+- A grin is a hole cut out of the face texture with a gum-and-throat box 2 units behind it and a teeth card between them: upper teeth hang below the upper gum, lower teeth stand on the lower gum one column over, fangs 3 pixels.
+- Eye boxes sit in front of every recess box. An eye plane in the same plane as the mouth box lost to it, and the lower eyes were cut in half.
+- Glowing eyes the user asks for are lit through the whole eye with the lightest tone in the middle and no pupil. In a dark scene, add a small blurred halo of the eye color around them in each frame.
 
 ## 5. Fur
 
@@ -165,11 +177,14 @@ Textures with `alpha > 1.5` are drawn unlit (glowing eyes, cracks). Parts with `
 - Check each gesture in the view the GIF uses. A lifted front leg seen from the front hid behind the rear leg on the same side; lift it out and forward so it leaves the other leg's silhouette.
 - A creepy idle: a slow breath, a sudden head tilt held for a while, quick twitches of the mouth parts, one leg tapping the ground twice. Fast moves sit between long still holds.
 - A dark scene: black background, lit texels darkened to about half, unlit texels (eyes) kept as they are, and a falloff toward the bottom so the legs fade into the dark. A shadow ellipse is invisible on black; leave it out.
+- Darken lit texels to half only on a pale model. A model that is already near black keeps about 0.8, or it disappears into the background.
 - Pulsing glow only when the user asks for it. Then it is soft, never fully off, with the phase shifted along the body so the light travels.
 - A shine is a diagonal band that slides once from the base of the blade to the tip, then the prop rests for the rest of the loop. The band center goes to the lightest tone and its halo two tones up, both unlit. Adding a fixed amount (+3) to every tone is invisible on small frames. Check the frame sheet: the band must be clear in at least three frames.
 - A turntable loops without a jump when the yaw is `start + 360 * i / N` for `i` from 0 to N - 1. Tilt the prop around its lowest point so nothing sinks into the ground, and use the same pose keys over the same N so the shine loops too.
 - Do not call the time parameter `t` in a function that also builds boxes with `f, t = ...`; the box corner overwrites the time.
 - Rendering an animation takes over a minute on a phone. Run it in the background, never two renders at once, and stop a render that a newer request has made obsolete.
+- Apply idle motion as outer transforms after building (shift and turn whole groups). Textures that depend on where a part is (glow fields, light maps) then stay the same in every frame and do not flicker.
+- ffmpeg reads stdin: a script piped to a server over ssh is eaten by the first ffmpeg call. Use `ffmpeg -nostdin` or copy the script over first.
 
 ## 8. Weapons and crystal props
 
